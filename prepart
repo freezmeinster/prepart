@@ -1,0 +1,45 @@
+#!/bin/bash 
+mount=$(mount | awk '{print $3}' | egrep -m1 "sd|hd")
+cek=$(ls $mount | grep 00)
+
+if [ $cek = "00" ]; then
+  echo "this computer ready to use as Chunkserver"
+elif [ $cek != "00" ]; then  
+
+  #This command to get Harddisk information
+  cat /proc/partitions  | awk '{print $4}' | cut -c 1-4 | egrep "sd|hd" | egrep -v "sd[a-z][1-9]|hd[a-z][1-9]"  > /tmp/hdd 
+
+  for a in $(cat /tmp/hdd); do
+     cat /proc/partitions | awk '{print $4}' | grep $a | cut -c 4-5 > /tmp/hdd_part_$a
+  done
+
+  #Get Raw size of hardisk 
+  for a in $(cat /tmp/hdd); do 
+    raw=$(cat /proc/partitions | grep -m1 $a | awk '{print $3}')
+    raw_size=$(($raw/1000))
+    percent=$((($raw_size*24)/1000))
+    size=$(($raw_size + $percent))
+    echo $size > /tmp/hdd_size_$a
+  done  
+
+  #Delete all partitions on each Hardisk 
+  for a in $(cat /tmp/hdd); do
+    for b in $(cat /tmp/hdd_part_$a); do
+      if [ $b != "" ]; then
+          parted /dev/$a rm $b
+       fi
+    done
+  done
+
+  #Create one partition in each Hardisk with maximum size
+  for a in $(cat /tmp/hdd); do 
+    hdd_size=$(cat /tmp/hdd_size_$a)
+    parted /dev/$a mkpart primary ext3 0 $hdd_size
+  done
+
+  #Format all hardisk partition with Ext3 
+  for a in $(cat /tmp/hdd); do
+     target=$(echo $a | awk '{print $1 1}')
+     mkfs.ext3 /dev/$target
+  done 
+fi
