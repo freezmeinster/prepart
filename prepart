@@ -28,11 +28,12 @@ elif [ "$cek" = "0" ]; then
     echo $size > /tmp/hdd_size_$a
   done  
 
-  #Delete all partitions on each Hardisk 
+  #Lable each Hardisk with "loop" flag and Delete all partitions on each Hardisk 
   for a in $(cat /tmp/hdd); do
     for b in $(cat /tmp/hdd_part_$a); do
+      parted -s /dev/$a mklabel loop
       if [ $b != "" ]; then
-          parted /dev/$a rm $b
+          parted -s /dev/$a rm $b
        fi
     done
   done
@@ -40,7 +41,7 @@ elif [ "$cek" = "0" ]; then
   #Create one partition in each Harddisk with maximum size
   for a in $(cat /tmp/hdd); do 
     hdd_size=$(cat /tmp/hdd_size_$a)
-    parted /dev/$a mkpart primary ext3 0 $hdd_size
+    parted -s /dev/$a mkpart ext3 0 $hdd_size
   done
 
   #Format all hardisk partition with Ext3 
